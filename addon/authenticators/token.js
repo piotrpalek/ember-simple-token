@@ -1,26 +1,41 @@
 import Ember from 'ember';
-import fetch from 'fetch';
-import config from 'ember-get-config';
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
+import fetch from 'fetch';
 
-const { get, isEmpty, RSVP } = Ember;
+const { get, isEmpty, RSVP, computed } = Ember;
 const { resolve, reject } = RSVP;
 
 export default BaseAuthenticator.extend({
-  serverTokenEndpoint: config['ember-simple-token'].serverTokenEndpoint || '/token',
+  serverTokenEndpoint: computed({
+    get() {
+      let config = get(this, 'config').serverTokenEndpoint;
+      return config;
+    }
+  }),
 
-  tokenAttributeName: config['ember-simple-token'].tokenAttributeName || 'token',
+  tokenAttributeName: 'token',
 
-  identificationAttributeName: config['ember-simple-token'].identificationAttributeName || 'email',
+  identificationAttributeName: computed({
+    get() {
+      let config = get(this, 'config').identificationAttributeName;
+      return config;
+    }
+  }),
 
   authenticate(data) {
-    return fetch(this.serverTokenEndpoint, {
+    let endpoint = get(this, 'serverTokenEndpoint');
+    let identificationAttributeName = get(this, 'identificationAttributeName');
+    const credentials = {};
+    credentials['password'] = data.password;
+    credentials[identificationAttributeName] = data.identification;
+
+    return fetch(endpoint, {
       method: 'post',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(credentials)
     }).then((response) => {
       if (response.status >= 200 && response.status < 300) {
         return resolve(response.json());
